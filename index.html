@@ -1,0 +1,279 @@
+<html>
+    <body>
+       <div class="app" id="content">
+        <canvas id="canvas" class="canvasPosition"/>
+       </div>
+    </body>
+</html>
+
+<style>
+*{
+  margin:0;
+  padding:0;
+}
+html,body{
+  width: 100%;
+  height: 100%;
+}
+.app{
+    width: 100%; 
+    height: 100%; 
+    background-image: url(./static/bg.jpg); 
+    -moz-background-size:100% 100%; 
+    background-size:100% 100%;
+}
+.canvasPosition{
+  position: absolute;
+}
+</style>
+
+<script>
+
+var canvas; //水波画布
+var ctx; //水波context
+
+var bgimg = new Image(); //背景图
+var yeziImg = []; //叶子图
+
+var yezis = []; //叶子对象
+
+
+//初始化
+window.addEventListener("load",() =>{
+
+  bgimg.src = './static/bg.jpg';
+  
+  var yeziImg1 = new Image();
+  yeziImg1.src = './static/1.png';
+  yeziImg.push(yeziImg1);
+
+  var yeziImg2 = new Image();
+  yeziImg2.src = './static/2.png';
+  yeziImg.push(yeziImg2);
+
+  var yeziImg3 = new Image();
+  yeziImg3.src = './static/3.png';
+  yeziImg.push(yeziImg3);
+
+  for(var i=0;i<10;i++){
+
+    document.getElementById("content").innerHTML+="<canvas id='canvas" + i + "' class='canvasPosition'/>";
+  }
+
+  for(var i=0;i<10;i++){
+    
+    myCanvas = document.getElementById("canvas" + i);
+    myCanvas.width = document.body.clientWidth;
+    myCanvas.height = document.body.clientHeight*0.99;
+    yezis.push(new yezi(myCanvas,myCanvas.getContext("2d")));
+  }
+
+  canvas = document.getElementById("canvas");
+  canvas.width = document.body.clientWidth
+  canvas.height = document.body.clientHeight*0.99
+  ctx = canvas.getContext("2d");
+
+  yeziImg3.onload = function(){
+
+    var index = 0;
+
+    var iCount = setInterval(function(){
+
+      yezis[index].fallenLeavesProduce();
+
+      index = index + 1;
+      if(index==yezis.length)index = 0;
+
+    },randomNum(500,2000));    
+
+  }
+
+
+})
+
+window.addEventListener("click",(e) => {
+
+  BezierEllipsePosition(e.clientX,e.clientY)
+})
+
+
+//随机数
+function randomNum(min,max){
+
+  var Range = max-min;
+  var Rand = Math.random();
+
+  return (min + Math.round(Rand * Range))
+}
+
+//水波
+function BezierEllipse(x, y, a, b){
+
+ //关键是bezierCurveTo中两个控制点的设置
+ //0.5和0.6是两个关键系数（在本函数中为试验而得）
+ var oa = a,ob = b;
+ var ox = 0.5 * oa, oy = 0.6 * b;
+
+ var da = a * 0.95,db = b *0.85;
+ var dx = 0.5 * da, dy = 0.6 * db;
+
+ ctx.save();
+ ctx.beginPath();
+ ctx.translate(x, y);
+ ctx.moveTo(0, ob); 
+ ctx.bezierCurveTo(ox, ob, oa, oy, oa, 0);
+ ctx.bezierCurveTo(oa, -oy, ox, -ob, 0, -ob);
+ ctx.bezierCurveTo(-ox, -ob, -oa, -oy, -oa, 0);
+ ctx.bezierCurveTo(-oa, oy, -ox, ob, 0, ob);
+ ctx.fill()
+ ctx.restore()
+ 
+
+ ctx.save();
+ ctx.clip();
+ ctx.beginPath();
+ ctx.drawImage(
+            bgimg, 
+            ((x-a)/canvas.width*bgimg.width), 
+            ((y-b)/canvas.height*bgimg.height), 
+            (a*2/canvas.width*bgimg.width), 
+            (a*2/canvas.height*bgimg.height),
+            x-a,
+            y-b,
+            a * 2,
+            b * 6);
+ctx.restore()
+
+ 
+ ctx.save();
+ ctx.globalCompositeOperation = "xor";
+ ctx.beginPath();
+ ctx.translate(x, y);
+ ctx.moveTo(0, db); 
+ ctx.bezierCurveTo(ox, db, da, oy, da, 0);
+ ctx.bezierCurveTo(da, -oy, ox, -db, 0, -db);
+ ctx.bezierCurveTo(-ox, -db, -da, -oy, -da, 0);
+ ctx.bezierCurveTo(-da, oy, -ox, db, 0, db);
+ ctx.fill()
+ ctx.restore()
+
+};
+
+//水波展示位置
+function BezierEllipsePosition(clientX,clientY){
+
+  var h = canvas.height/7*5; //限制水波显示位置
+
+    if(clientY<h)return
+    
+    var x=60,y=12; 
+
+    var iCount = setInterval(function(){
+
+     BezierEllipse(clientX,clientY, x, y);
+
+      x=x+1;
+      y=y+0.4;
+
+       if(x>=80){
+        ctx.clearRect(clientX-x,clientY-y,clientY+x,clientY+y)
+        clearInterval(iCount);
+       }
+
+   },100);
+}
+
+function yezi(myCanvas,myCtx){
+
+this.myCanvas = myCanvas;
+
+this.myCtx = myCtx;
+
+this.judge=1; //判断当前是否有在画叶子
+
+//落叶产生
+this.fallenLeavesProduce = function(){
+
+  var x0=this.myCanvas.width/3 , x1=this.myCanvas.width/3*2;
+  var y0=this.myCanvas.height/3 , y1=this.myCanvas.height/3*1.4;
+
+  var luoyeX=randomNum(x0,x1) , luoyeY=randomNum(y0,y1);
+
+  if(this.judge==1){
+    this.fallenLeavesMotion(luoyeX,luoyeY);
+  }
+
+  return this.judge;
+}
+
+//落叶运动
+this.fallenLeavesMotion = function(luoyeX,luoyeY){
+
+  this.judge==0;
+
+  var img = yeziImg[randomNum(0,2)]; //随机叶子
+
+  var motionHeight = randomNum(this.myCanvas.height/10*7.5,this.myCanvas.height/10*9) //随机叶子掉落位置
+
+  var step = this.myCanvas.height/200; //降落速度步长
+
+  var directionBase = -1; //总的偏移方向
+  var deviation = -2; //偏移
+  var LastTimeDeviation = deviation; //上一次偏移
+
+  var fallenLeavesSize = randomNum(this.myCanvas.width/220,this.myCanvas.width/200); //叶子大小
+
+  var iCount = setInterval(a => {
+
+    this.myCtx.clearRect(
+     luoyeX-LastTimeDeviation,
+     luoyeY-step,
+     luoyeX-LastTimeDeviation + fallenLeavesSize,
+     luoyeY-step + fallenLeavesSize)  
+
+   this.fallenLeaves(luoyeX,luoyeY,img,fallenLeavesSize) 
+   
+   if(luoyeY>=motionHeight){
+
+    this.myCtx.clearRect(
+     luoyeX,
+     luoyeY,
+     luoyeX + fallenLeavesSize,
+     luoyeY + fallenLeavesSize)
+    BezierEllipsePosition(luoyeX,luoyeY);
+    this.judge==1;
+    clearInterval(iCount);
+   }
+
+   LastTimeDeviation = deviation;
+   luoyeX = luoyeX + deviation;
+   luoyeY = luoyeY + step;
+
+   if(luoyeY%5<1)
+   if(randomNum(1,2)==1){
+    
+    deviation = randomNum(0,1) + directionBase;
+   }else{
+
+    deviation = ~randomNum(0,1) + directionBase;
+   }
+
+  },80);
+}
+  //画落叶
+this.fallenLeaves = function(luoyeX,luoyeY,img,fallenLeavesSize){
+
+this.myCtx.save();
+this.myCtx.beginPath();
+this.myCtx.drawImage(
+          img, 
+          luoyeX,
+          luoyeY,
+          fallenLeavesSize, 
+          fallenLeavesSize);
+          this.myCtx.restore()
+}
+
+}
+
+</script>
